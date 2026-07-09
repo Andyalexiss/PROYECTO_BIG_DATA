@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+# Opcional: si no quieres subir el CSV original pesado
+crime_rate_safety_analysis-selected-columns.csv

@@ -1,0 +1,15 @@
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: contenedor_bigdata
+    environment:
+      POSTGRES_DB: proyecto_bigdata
+      POSTGRES_USER: grupo_epn
+      POSTGRES_PASSWORD: epn_bigdata_2026
+    ports:
+      - "5555:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
