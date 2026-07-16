@@ -1,4 +1,4 @@
-﻿incident_id,year,month,day_of_week,season,time_of_day,country,area_type,population_density_per_sqkm,crime_type,crime_severity_score,victim_count,victim_gender,victim_age_group,injuries_reported,fatalities,financial_loss_usd,weapon_used,mes_nombre,inconsistencia_victimas,perdida_atipica,nivel_severidad
+﻿id_incidente,anio,mes,dia_semana,estacion,momento_dia,pais,tipo_area,densidad_poblacion_por_km2,tipo_delito,puntaje_severidad_delito,cantidad_victimas,genero_victima,grupo_edad_victima,lesiones_reportadas,fallecidos,perdida_financiera_usd,arma_utilizada,mes_nombre,inconsistencia_victimas,perdida_atipica,nivel_severidad
 CRM0000001,2022,7,Miércoles,Invierno,Tarde (12pm-6pm),Alemania,Remoto,16,Vandalismo,2.7,3,Femenino,65+,0,0,114.41,Arma de Fuego,Julio,False,False,Baja
 CRM0000002,2024,4,Domingo,Otoño,Noche (10pm-2am),Pakistán,Rural,252,Fraude,3.5,1,Femenino,26-35,0,0,19729.14,Arma Blanca,Abril,False,True,Media
 CRM0000003,2023,2,Martes,Primavera,Tarde (12pm-6pm),Estados Unidos,Rural,136,Asalto,5.7,1,Femenino,18-25,1,0,134.53,Arma de Fuego,Febrero,False,False,Media

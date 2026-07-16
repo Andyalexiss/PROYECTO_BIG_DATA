@@ -43,6 +43,30 @@ URLS_POSTGRES = [
 ]
 
 # ==========================================
+# TRADUCCIÓN DE NOMBRES DE COLUMNAS (Inglés -> Español)
+# ==========================================
+DICC_COLUMNAS = {
+    'incident_id': 'id_incidente',
+    'year': 'anio',
+    'month': 'mes',
+    'day_of_week': 'dia_semana',
+    'season': 'estacion',
+    'time_of_day': 'momento_dia',
+    'country': 'pais',
+    'area_type': 'tipo_area',
+    'population_density_per_sqkm': 'densidad_poblacion_por_km2',
+    'crime_type': 'tipo_delito',
+    'crime_severity_score': 'puntaje_severidad_delito',
+    'victim_count': 'cantidad_victimas',
+    'victim_gender': 'genero_victima',
+    'victim_age_group': 'grupo_edad_victima',
+    'weapon_used': 'arma_utilizada',
+    'financial_loss_usd': 'perdida_financiera_usd',
+    'fatalities': 'fallecidos',
+    'injuries_reported': 'lesiones_reportadas'
+}
+
+# ==========================================
 # DICCIONARIOS DE NORMALIZACIÓN (Inglés -> Español)
 # Cobertura: los 15 países presentes en el CSV real + países
 # adicionales por si el dataset del equipo se amplía.
@@ -158,7 +182,7 @@ def extraer_datos(ruta: str) -> pd.DataFrame:
 # 2. FASE DE TRANSFORMACIÓN
 # ==========================================
 def sanear_estructura(df: pd.DataFrame) -> pd.DataFrame:
-    """Elimina SOLO filas 100% vacías y duplicados exactos. No toca columnas."""
+    """Elimina SOLO filas 100% vacías y duplicados exactos. Traduce los nombres de las columnas."""
     print("[ETL] Analizando integridad estructural del dataset...")
     filas_iniciales = len(df)
 
@@ -174,8 +198,12 @@ def sanear_estructura(df: pd.DataFrame) -> pd.DataFrame:
     duplicadas = antes_dup - len(df)
 
     print(f"[ETL] Filas fantasma eliminadas: {vacias} | Duplicados exactos eliminados: {duplicadas}")
+    
+    # Renombrar columnas a español antes de cualquier otra transformación
+    df = df.rename(columns=DICC_COLUMNAS)
+    
     print(f"[ETL] CONFIRMACIÓN: {len(df):,} filas reales listas para transformar "
-          f"({len(df.columns)} columnas, ninguna eliminada).")
+          f"({len(df.columns)} columnas renombradas al español, ninguna eliminada).")
     return df
 
 
@@ -190,14 +218,13 @@ def sanitizar_texto(df: pd.DataFrame) -> pd.DataFrame:
 
 def normalizar_categorias(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Traduce categorías EN->ES de forma no destructiva: si un valor no está
-    en el diccionario, se conserva tal cual (no se pierde información) y
-    se reporta para que el equipo lo revise.
+    Traduce categorías EN->ES de forma no destructiva sobre las columnas traducidas:
+    si un valor no está en el diccionario, se conserva tal cual y se reporta.
     """
     mapeos = {
-        'country': DICC_PAISES, 'crime_type': DICC_DELITOS, 'area_type': DICC_AREA,
-        'season': DICC_ESTACIONES, 'day_of_week': DICC_DIAS, 'time_of_day': DICC_TIEMPO,
-        'victim_gender': DICC_GENERO, 'victim_age_group': DICC_EDAD, 'weapon_used': DICC_ARMA,
+        'pais': DICC_PAISES, 'tipo_delito': DICC_DELITOS, 'tipo_area': DICC_AREA,
+        'estacion': DICC_ESTACIONES, 'dia_semana': DICC_DIAS, 'momento_dia': DICC_TIEMPO,
+        'genero_victima': DICC_GENERO, 'grupo_edad_victima': DICC_EDAD, 'arma_utilizada': DICC_ARMA,
     }
 
     for columna, diccionario in mapeos.items():
@@ -210,9 +237,9 @@ def normalizar_categorias(df: pd.DataFrame) -> pd.DataFrame:
                   f"(se conservan en inglés): {sorted(no_mapeados)}")
         df[columna] = df[columna].replace(diccionario)
 
-    # Columna derivada: nombre del mes en español (no reemplaza la columna 'month' original)
-    if 'month' in df.columns:
-        df['mes_nombre'] = df['month'].map(MESES_ES)
+    # Columna derivada: nombre del mes en español (no reemplaza la columna 'mes' original)
+    if 'mes' in df.columns:
+        df['mes_nombre'] = df['mes'].map(MESES_ES)
 
     print("[ETL] Normalización lingüística (EN->ES) aplicada sobre categorías.")
     return df
@@ -221,13 +248,13 @@ def normalizar_categorias(df: pd.DataFrame) -> pd.DataFrame:
 def tratar_nulos_sin_eliminar(df: pd.DataFrame) -> pd.DataFrame:
     """
     Rellena nulos con una categoría explícita en lugar de eliminar filas o
-    columnas. Un nulo en 'weapon_used' es información real (no se usó arma).
+    columnas. Un nulo en 'arma_utilizada' es información real (no se usó arma).
     """
     nulos_antes = df.isnull().sum()
     columnas_con_nulos = nulos_antes[nulos_antes > 0]
 
-    if 'weapon_used' in df.columns:
-        df['weapon_used'] = df['weapon_used'].fillna('Sin Arma Registrada')
+    if 'arma_utilizada' in df.columns:
+        df['arma_utilizada'] = df['arma_utilizada'].fillna('Sin Arma Registrada')
 
     nulos_despues = df.isnull().sum()
 
@@ -249,29 +276,29 @@ def auditar_calidad(df: pd.DataFrame) -> pd.DataFrame:
     print("[ETL] Auditoría de calidad de datos (validación de rangos y outliers)...")
 
     # Rango de años observado vs. razonable
-    if 'year' in df.columns:
-        rango = (df['year'].min(), df['year'].max())
-        print(f"       - Rango de 'year': {rango}")
+    if 'anio' in df.columns:
+        rango = (df['anio'].min(), df['anio'].max())
+        print(f"       - Rango de 'anio': {rango}")
 
-    # Consistencia lógica: fatalities no debería superar victim_count
-    if {'fatalities', 'victim_count'}.issubset(df.columns):
-        inconsistentes = (df['fatalities'] > df['victim_count']).sum()
-        df['inconsistencia_victimas'] = df['fatalities'] > df['victim_count']
-        print(f"       - Registros con fatalities > victim_count (señalados, no eliminados): {inconsistentes}")
+    # Consistencia lógica: fallecidos no debería superar cantidad_victimas
+    if {'fallecidos', 'cantidad_victimas'}.issubset(df.columns):
+        inconsistentes = (df['fallecidos'] > df['cantidad_victimas']).sum()
+        df['inconsistencia_victimas'] = df['fallecidos'] > df['cantidad_victimas']
+        print(f"       - Registros con fallecidos > cantidad_victimas (señalados, no eliminados): {inconsistentes}")
 
     # Outliers de pérdida financiera vía rango intercuartílico (IQR)
-    if 'financial_loss_usd' in df.columns:
-        q1, q3 = df['financial_loss_usd'].quantile([0.25, 0.75])
+    if 'perdida_financiera_usd' in df.columns:
+        q1, q3 = df['perdida_financiera_usd'].quantile([0.25, 0.75])
         iqr = q3 - q1
         limite_superior = q3 + 1.5 * iqr
-        df['perdida_atipica'] = df['financial_loss_usd'] > limite_superior
-        print(f"       - Outliers de 'financial_loss_usd' (> {limite_superior:,.2f} USD) "
+        df['perdida_atipica'] = df['perdida_financiera_usd'] > limite_superior
+        print(f"       - Outliers de 'perdida_financiera_usd' (> {limite_superior:,.2f} USD) "
               f"señalados: {df['perdida_atipica'].sum()}")
 
     # Columna derivada útil para Tableau: nivel de severidad categórico
-    if 'crime_severity_score' in df.columns:
+    if 'puntaje_severidad_delito' in df.columns:
         df['nivel_severidad'] = pd.cut(
-            df['crime_severity_score'],
+            df['puntaje_severidad_delito'],
             bins=[0, 3.33, 6.66, 10],
             labels=['Baja', 'Media', 'Alta'],
             include_lowest=True,
@@ -315,13 +342,13 @@ def cargar_a_postgres(df: pd.DataFrame, engine, tabla: str):
         total_bd = conn.execute(text(f"SELECT COUNT(*) FROM {tabla}")).scalar()
         print(f"[ETL] VERIFICACIÓN: la tabla '{tabla}' contiene {total_bd:,} registros en PostgreSQL.")
 
-        if 'country' in df.columns:
+        if 'pais' in df.columns:
             resultado = conn.execute(
-                text(f"SELECT country, COUNT(*) AS total FROM {tabla} GROUP BY country ORDER BY total DESC LIMIT 5")
+                text(f"SELECT pais, COUNT(*) AS total FROM {tabla} GROUP BY pais ORDER BY total DESC LIMIT 5")
             )
             print("[ETL] Muestra de verificación (top 5 países cargados):")
             for fila in resultado:
-                print(f"       - {fila.country}: {fila.total} registros")
+                print(f"       - {fila.pais}: {fila.total} registros")
 
 
 # ==========================================
